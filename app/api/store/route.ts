@@ -1,5 +1,5 @@
 import { env } from 'cloudflare:workers';
-import { getChatGPTUser } from '../../chatgpt-auth';
+import { getStoreUser, testLoginEnabled } from '../../../lib/test-auth';
 import { initialProducts, categories, type Product } from '../../../lib/catalog';
 import {settlePayment} from '../../../lib/payments';
 export const dynamic='force-dynamic';
@@ -7,7 +7,7 @@ const adminEmail='mahlangu843@gmail.com';
 const json=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'no-store'}});
 async function catalog():Promise<Product[]>{const rows=await env.DB!.prepare('SELECT data FROM products').all<{data:string}>();return rows.results.length?rows.results.map(x=>JSON.parse(x.data)):initialProducts;}
 export async function GET(){try{
- const user=await getChatGPTUser(); const products=await catalog();
+ const user=await getStoreUser(); const products=await catalog();
  if(!user)return json({products,user:null,admin:false});
  const admin=user.email.toLowerCase()===adminEmail;
  const profile=await env.DB!.prepare('SELECT data FROM profiles WHERE id=?').bind(user.userId).first<{data:string}>();
@@ -17,7 +17,7 @@ export async function GET(){try{
  }catch(e){console.error(e);return json({error:'We could not load your account. Please try again.'},500);}}
 export async function POST(req:Request){try{
  if(req.headers.get('origin')!==new URL(req.url).origin)return json({error:'Request not permitted.'},403);
- const user=await getChatGPTUser(); if(!user)return json({error:'Please sign in to continue.'},401);
+ const user=await getStoreUser(); if(!user)return json({error:'Please sign in to continue.'},401);
  const b=await req.json() as any; const db=env.DB!;
  if(b.action==='profile'){
   const p=b.profile||{};if(typeof p.email!=='string'||!/^\S+@\S+\.\S+$/.test(p.email))return json({error:'Enter a valid email address.'},400);
@@ -30,6 +30,7 @@ export async function POST(req:Request){try{
   await db.prepare('INSERT INTO carts(id,data) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data').bind(user.userId,JSON.stringify(cart)).run();return json({ok:true});
  }
  if(b.action==='delete-account'){
+  if(testLoginEnabled())await db.prepare('DELETE FROM sessions WHERE email=?').bind(user.email).run();
   await db.batch([db.prepare('DELETE FROM profiles WHERE id=?').bind(user.userId),db.prepare('DELETE FROM carts WHERE id=?').bind(user.userId),db.prepare('DELETE FROM orders WHERE user_id=?').bind(user.userId)]);return json({ok:true});
  }
  if(b.action==='product'){

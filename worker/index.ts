@@ -9,7 +9,7 @@ const worker = {
     if ((env as unknown as Record<string,string>).DIRECT_PREVIEW === 'true') {
       const url = new URL(request.url);
       if (['/signin-with-chatgpt','/signout-with-chatgpt','/callback'].includes(url.pathname)) {
-        return Response.redirect('https://muthi-market.pearlymug256.chatgpt.site' + url.pathname + url.search, 302);
+        return Response.redirect(new URL('/login', request.url).href, 302);
       }
       const safeHeaders = new Headers(request.headers);
       for (const name of [...safeHeaders.keys()]) {

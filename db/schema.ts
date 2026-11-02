@@ -3,3 +3,4 @@ export const products = sqliteTable('products', { id: text('id').primaryKey(), d
 export const profiles = sqliteTable('profiles', { id: text('id').primaryKey(), data: text('data').notNull() });
 export const carts = sqliteTable('carts', { id: text('id').primaryKey(), data: text('data').notNull() });
 export const orders = sqliteTable('orders', { id: text('id').primaryKey(), userId: text('user_id').notNull(), data: text('data').notNull(), createdAt: integer('created_at').notNull() });
+export const sessions = sqliteTable('sessions', { id: text('id').primaryKey(), email: text('email').notNull(), expiresAt: integer('expires_at').notNull() });
